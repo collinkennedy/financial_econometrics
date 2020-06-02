@@ -1,0 +1,17 @@
+---
+title: "CAPM_example"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##CAPM MODEL EXAMPLE
+We first scrape some daily stock trading data from yahoo. Here “^GSPC” is SP500, “BAC” is
+Bank of America, “VFINX” is a mutual fund that is aimed to track the SP500 index. “VBIND”
+and “FDAFX” are two other mutual funds that we will talk about in details later. We start from
+2004 because FDAFX went on market in the mid of 2003.
+We also get the 3-month interest rate from FRED. Different from our last R example file where
+we downloaded monthly interest rate data, this time we need daily data (of the annual yield of 3-
+month T-bills) so that stock data and bond data are of the same frequency.
