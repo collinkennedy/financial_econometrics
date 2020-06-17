@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-##CAPM MODEL EXAMPLE
+
 We first scrape some daily stock trading data from yahoo. Here “^GSPC” is SP500, “BAC” is
 Bank of America, “VFINX” is a mutual fund that is aimed to track the SP500 index. “VBIND”
 and “FDAFX” are two other mutual funds that we will talk about in details later. We start from
@@ -15,3 +15,32 @@ and “FDAFX” are two other mutual funds that we will talk about in details la
 We also get the 3-month interest rate from FRED. Different from our last R example file where
 we downloaded monthly interest rate data, this time we need daily data (of the annual yield of 3-
 month T-bills) so that stock data and bond data are of the same frequency.
+
+
+```{r , echo= FALSE}
+rm(list=ls())
+library("quantmod") 
+getSymbols(c( "^GSPC","BAC", 'VFINX',"VBINX","FDAFX"),src="yahoo", from = '2004-01-
+01', to = '2019-04-30')
+getSymbols("DGS3MO", src = "FRED")
+```
+
+Next, we combine data from the two sources into one new data frame called “data”. We also
+rename each variable in it (with a simpler variable name).
+
+```{r , echo= FALSE}
+data <-
+merge(GSPC$GSPC.Close,BAC$BAC.Close,VFINX$VFINX.Close,VBINX$VBINX.Close,FDAFX$FDAFX.Cl
+ose,DGS3MO['2004::2019-04'])
+names(data) <- c("SP500","BAC","VFINX", "VBINX","FDAFX","DGS3MO")
+````
+The merged data frame shows some missing values from days of market closure. (Note the stock
+market and the bond market also have a slightly different set of closure dates.) In this example
+we decide to get rid of all days that at least one market is closed.
+
+```{r , echo = FALSE}
+colSums(is.na(data))
+data<-na.omit(data)
+colSums(is.na(data))
+```
+
