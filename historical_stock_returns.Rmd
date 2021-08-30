@@ -1,0 +1,157 @@
+---
+title: "SPY Analysis"
+output: html_document
+---
+
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(quantmod)
+library(lubridate)
+library(bizdays)
+```
+
+
+
+```{r}
+#establish working days, useful later
+create.calendar("standard_calendar",weekdays = c("saturday","sunday"))
+
+#read in spy data
+spy_data = read_csv("SPY-3.csv") %>% 
+  mutate(weekday = weekdays(Date)) %>% 
+  mutate(month = month(Date))
+  
+spy_data
+
+opex_fridays = c("2021-08-20","2021-07-23","2021-06-23",
+                 "2021-05-21", "2021-04-23","2021-03-19", "2021-02-19","2021-01-22",
+                 "2020-12-18","2020-11-20") %>% as.Date()
+
+
+intervals = interval(start = (opex_fridays-6) ,end = opex_fridays + 6)
+intervals
+
+
+low_dates = c()
+for(i in 1:length(opex_fridays)){
+  low_days_to_append = seq(from = as.Date(opex_fridays[i])-2, to = as.Date(opex_fridays[i])+3, by = "days")
+ 
+  low_dates = c(low_dates,low_days_to_append)
+}
+low_dates =low_dates %>% 
+  as_date()
+
+
+  
+#get the lowest lows
+spy_lows= spy_data %>% 
+  filter(Date %in% low_dates) %>% 
+  mutate(weekday = weekdays(Date)) %>% 
+  mutate(month = month(Date)) %>% 
+  group_by(month) %>% 
+  slice_min(Low) %>% 
+  select(lowest_low_date = Date,lowest_month = month,low_weekday = weekday, lowest_low = Low)
+
+spy_lows %>% 
+  arrange(desc(lowest_low_date))
+
+
+#now that we have the lowest lows, pull them from the dataframe and use them to find the corresponding highs:
+actual_low_dates = spy_lows %>% 
+  pull(lowest_low_date)
+
+#search and grab the highest highs up to 6 days before each of the lowest low days
+high_dates = c()
+for(i in 1:length(actual_low_dates)){
+  high_days_to_append = seq(from = as.Date(actual_low_dates[i])-6, to = as.Date(actual_low_dates[i]), by = "days")
+  high_dates = c(high_dates,high_days_to_append)
+}
+
+high_dates = high_dates %>% 
+  as_date()
+
+high_dates
+
+
+spy_highs = spy_data %>%
+  filter(Date %in% high_dates) %>%
+  mutate(weekday = weekdays(Date)) %>%
+  mutate(month = month(Date)) %>%
+  group_by(month) %>%
+  slice_max(High) %>%
+  select(highest_high_date = Date,high_month = month,high_weekday = weekday, highest_high= High)
+
+
+spy_highs
+# 
+spy_high_low = spy_lows %>%
+  bind_cols(spy_highs) %>% 
+  mutate(price_change = highest_high - lowest_low) %>%
+  relocate(lowest_low_date,.before = highest_high_date) %>% 
+  mutate(percentage_price_change = (lowest_low - highest_high)/highest_high * 100)
+
+spy_high_low %>% 
+  summarise(avg_percentage_price_change = mean(percentage_price_change))
+mean(spy_high_low$percentage_price_change)
+
+
+spy_high_low
+  
+```
+
+
+#grab two through 4 days after the lowest low and find the high
+```{r}
+spy_data
+
+
+lowest_lows = spy_high_low %>% 
+  pull(lowest_low_date)
+
+lows_df = spy_high_low %>% 
+  select(lowest_low_date,lowest_month,low_weekday,lowest_low)
+
+
+high_dates_after_low = c()
+for(i in 1:length(actual_low_dates)){
+  high_days_to_append = seq(from = as.Date(lowest_lows[i]), to = as.Date(lowest_lows[i]+6), by = "days")
+  high_dates_after_low = c(high_dates_after_low,high_days_to_append)
+}
+
+high_dates_after_low = high_dates_after_low %>% 
+  as_date()
+lows_df
+
+spy_data %>% 
+  filter(Date %in% high_dates_after_low)
+
+
+#function to calculate the number of weekdays:
+Nweekdays <- function(a, b){
+    sum(!weekdays(seq(a, b, "days")) %in% c("Saturday", "Sunday"))
+} 
+
+Nweekdays("2021-06-01","2021-06-12")
+
+spy_gap_up = lows_df %>% 
+  left_join(spy_data %>% 
+  filter(Date %in% high_dates_after_low), by = c("lowest_month" = "month")) %>% 
+  arrange(desc(lowest_low_date)) %>% 
+  group_by(lowest_month) 
+spy_gap_up %>% 
+  select(-c(`Adj Close`,Volume,Low,Close)) %>% 
+  group_by(lowest_month) %>% 
+  mutate(days_after_lowest_low = case_when(
+   
+  ))
+
+bizdays("2021-06-01","2021-06-12",cal = "standard_calendar")
+
+spy_gap_up
+```
+
+
+
+
+
