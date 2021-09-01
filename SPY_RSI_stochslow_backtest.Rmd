@@ -1,0 +1,14 @@
+---
+title: "SPY_RSI_stochslow_backtest"
+author: "Collin"
+date: "9/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(quantmod)
+library(httr)
+```
+
