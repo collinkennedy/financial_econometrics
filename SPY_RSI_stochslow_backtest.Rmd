@@ -14,6 +14,7 @@ library(httr)
 library(jsonlite)
 library(TTR)
 library(zoo)
+library(chron)
 ```
 
 
@@ -22,7 +23,7 @@ library(zoo)
 ```{r}
 #initialize taapi token into Renviron file
 readRenviron(".Renviron")
-Sys.getenv("IEX_TOKEN")
+Sys.getenv("ALPHA_VANTAGE_KEY")
 ```
 
 
@@ -51,18 +52,65 @@ price_data = price_data %>%
 
   
 
-price_data %>% 
-  filter(label == "10:30 AM")
 
 ```
 
 #start here
 ```{r}
 price_data = price_data %>% 
-  mutate(slowK = rollmean(fastK,k = 3, fill = NA))
-price_data
+  mutate(slowK = rollmean(fastK,k = 3, fill = NA,align = "right" )) %>% 
+  mutate(my_slowD = rollmean(slowK,k = 3, fill = NA,align = "right")) #same as the one calculated with TTR function stoch()
+price_data #fastD and slowK are the same 
+
+
+#example
+price_data %>% 
+  filter(label == "10:30 AM")
+```
+
+
+#Using Alpha Vantage API
+```{r}
+
+alpha_vantage_call = GET(str_glue("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&symbol={symbol}&interval=5min&slice=year1month1&adjusted=false&apikey={api_key}",symbol = "SPY",api_key = Sys.getenv("ALPHA_VANTAGE_KEY")))
+
+str(alpha_vantage_call)
+alpha_vantage_call$request
+content(alpha_vantage_call)
+
+
+stoch_call = GET(str_glue("https://www.alphavantage.co/query?function=STOCH&symbol={symbol}&interval=1min&apikey={key}&fastkperiod=14&slowdperiod=3",
+                          symbol = "SPY", key = Sys.getenv("ALPHA_VANTAGE_KEY")))
+stochastic_data = content(stoch_call, type = "text") %>% 
+  fromJSON()
+
+stochastic_data
+stochastic_data =stochastic_data$`Technical Analysis: STOCH` %>% 
+  as.tibble() 
+stochastic_data
+
+
+p="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+time_extract = "\\s[0-9]{2}:[0-9]{2}"
+stochastic_data = stochastic_data %>% unnest() %>% 
+  mutate(stochastic = rep_len(c("SlowD", "SlowK"), length.out = 2)) %>% 
+  pivot_longer(cols = -stochastic, names_to = "time", values_to = "stochastic_values") %>% 
+  arrange(time) %>% 
+  mutate(date = ymd_hm(time,tz = "EST")) %>% 
+  pivot_wider(names_from = stochastic,values_from = stochastic_values) %>% 
+  filter(date >= "2021-09-01") %>% 
+  arrange(date,time)
+
+
+
+
+  
+
 
 ```
+
+
+
 
 
 
