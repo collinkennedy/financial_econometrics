@@ -6,9 +6,64 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+rm(list = ls())
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(quantmod)
 library(httr)
+library(jsonlite)
+library(TTR)
+library(zoo)
 ```
+
+
+
+
+```{r}
+#initialize taapi token into Renviron file
+readRenviron(".Renviron")
+Sys.getenv("IEX_TOKEN")
+```
+
+
+```{r}
+#test query the API
+
+
+call_received = GET(str_glue("https://cloud.iexapis.com/stable/stock/spy/chart/date/{date}?token={YOUR_TOKEN_HERE}",
+             date = "20210901",                
+             YOUR_TOKEN_HERE = Sys.getenv("IEX_TOKEN")))
+
+price_data = content(call_received,type = "text") %>% 
+  fromJSON()
+
+high_low_close = price_data %>% 
+  select(high,low,close)
+
+rsi_values = RSI(price = price_data$average)
+stochastic_values =stoch(HLC = high_low_close)
+
+price_data = price_data %>% 
+  bind_cols(rsi_values = rsi_values) %>% 
+  bind_cols(stochastic_values = as.tibble(stochastic_values)) %>% 
+  select(-c(notional,numberOfTrades,minute))
+
+
+  
+
+price_data %>% 
+  filter(label == "10:30 AM")
+
+```
+
+#start here
+```{r}
+price_data = price_data %>% 
+  mutate(slowK = rollmean(fastK,k = 3, fill = NA))
+price_data
+
+```
+
+
+
 

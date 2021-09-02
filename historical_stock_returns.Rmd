@@ -9,6 +9,28 @@ library(tidyverse)
 library(quantmod)
 library(lubridate)
 library(bizdays)
+library(ggthemes)
+```
+
+
+
+
+```{r, eval = FALSE}
+#will create an .Renviron file
+#store git token here
+usethis::edit_r_environ("project")
+```
+
+One your are done, run the following line
+```{r, eval = FALSE}
+readRenviron(".Renviron")
+```
+Then your password could be retrived by `Sys.getenv("DATABASEPW")`.
+
+The `.Renviron` won't be pushed to the git repo because the file was specified in `.gitignore`.
+
+```{r}
+Sys.getenv("GITHUB_TOKEN")
 ```
 
 
@@ -127,28 +149,45 @@ spy_data %>%
   filter(Date %in% high_dates_after_low)
 
 
-#function to calculate the number of weekdays:
-Nweekdays <- function(a, b){
-    sum(!weekdays(seq(a, b, "days")) %in% c("Saturday", "Sunday"))
-} 
 
-Nweekdays("2021-06-01","2021-06-12")
 
 spy_gap_up = lows_df %>% 
   left_join(spy_data %>% 
   filter(Date %in% high_dates_after_low), by = c("lowest_month" = "month")) %>% 
   arrange(desc(lowest_low_date)) %>% 
-  group_by(lowest_month) 
-spy_gap_up %>% 
-  select(-c(`Adj Close`,Volume,Low,Close)) %>% 
+  select(-c(`Adj Close`,Volume,Low,Close,Open,weekday)) %>% 
   group_by(lowest_month) %>% 
   mutate(days_after_lowest_low = case_when(
-   
-  ))
+    bizdays(lowest_low_date,Date, cal = "standard_calendar") == 0 ~ "0 days",
+    bizdays(lowest_low_date,Date, cal = "standard_calendar") == 1 ~ "1 days",
+    bizdays(lowest_low_date,Date, cal = "standard_calendar") == 2 ~ "2 days",
+    bizdays(lowest_low_date,Date, cal = "standard_calendar") == 3 ~ "3 days",
+    bizdays(lowest_low_date,Date, cal = "standard_calendar") == 4 ~ "4 days",
+  )) %>% 
+  mutate(gap_up_price_diff = High - lowest_low) %>% 
+  mutate(percentage_change = gap_up_price_diff/lowest_low * 100)
+  
+  spy_gap_up %>% 
+    group_by(days_after_lowest_low) %>% 
+    summarise(average_percentage_change = mean(percentage_change)) %>% 
+  ggplot(mapping = aes(x = days_after_lowest_low,y = average_percentage_change))+
+    geom_col(fill = "steelblue")+
+    geom_text(aes(label=round(average_percentage_change,3)), position=position_dodge(width=0.9), vjust=-0.25)+
+    ggtitle("Average Percentage Price Change of SPY", subtitle = "by Days following Gap Down Minimum")+
+    ylab("Average Percentage Error")+
+    xlab("Days After Gap Down Min.")
+  
+  
+  # pivot_wider(names_from = days_after_lowest_low, values_from = High) %>% 
+  # mutate(gap_up_price_diff = case_when(
+  #   !is.na(`0 days`) ~ `0 days` - lowest_low,
+  #   !is.na(`1 days`) ~ `1 days` - lowest_low,
+  #   !is.na(`2 days`) ~ `2 days` - lowest_low,
+  #   !is.na(`3 days`) ~ `3 days` - lowest_low,
+  #   !is.na(`4 days`) ~ `4 days` - lowest_low
+  # ))
 
-bizdays("2021-06-01","2021-06-12",cal = "standard_calendar")
 
-spy_gap_up
 ```
 
 
