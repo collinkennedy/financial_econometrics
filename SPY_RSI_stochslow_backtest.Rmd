@@ -23,7 +23,7 @@ library(chron)
 ```{r}
 #initialize taapi token into Renviron file
 readRenviron(".Renviron")
-Sys.getenv("ALPHA_VANTAGE_KEY")
+Sys.getenv("EOD_TOKEN")
 ```
 
 
@@ -38,16 +38,14 @@ call_received = GET(str_glue("https://cloud.iexapis.com/stable/stock/spy/chart/d
 price_data = content(call_received,type = "text") %>% 
   fromJSON()
 
+price_data
 high_low_close = price_data %>% 
-  select(high,low,close)
+  select(date,minute = label,high,low,close)
 
-rsi_values = RSI(price = price_data$average)
-stochastic_values =stoch(HLC = high_low_close)
 
-price_data = price_data %>% 
-  bind_cols(rsi_values = rsi_values) %>% 
-  bind_cols(stochastic_values = as.tibble(stochastic_values)) %>% 
-  select(-c(notional,numberOfTrades,minute))
+
+
+
 
 
   
@@ -57,35 +55,28 @@ price_data = price_data %>%
 
 #start here
 ```{r}
-price_data = price_data %>% 
-  mutate(slowK = rollmean(fastK,k = 3, fill = NA,align = "right" )) %>% 
-  mutate(my_slowD = rollmean(slowK,k = 3, fill = NA,align = "right")) #same as the one calculated with TTR function stoch()
-price_data #fastD and slowK are the same 
 
-
-#example
-price_data %>% 
-  filter(label == "10:30 AM")
+high_low_close %>% 
+  mutate(interval = rep(seq(1,n()/5), each=5)) %>% 
+  group_by(interval) %>% 
+  mutate(highest_high_5_days = rollmax())
+ 
 ```
 
 
 #Using Alpha Vantage API
 ```{r}
-
-alpha_vantage_call = GET(str_glue("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&symbol={symbol}&interval=5min&slice=year1month1&adjusted=false&apikey={api_key}",symbol = "SPY",api_key = Sys.getenv("ALPHA_VANTAGE_KEY")))
-
-str(alpha_vantage_call)
-alpha_vantage_call$request
-content(alpha_vantage_call)
-
-
+#Call the API
 stoch_call = GET(str_glue("https://www.alphavantage.co/query?function=STOCH&symbol={symbol}&interval=1min&apikey={key}&fastkperiod=14&slowdperiod=3",
                           symbol = "SPY", key = Sys.getenv("ALPHA_VANTAGE_KEY")))
+
+stoch_call
+#format properly
 stochastic_data = content(stoch_call, type = "text") %>% 
   fromJSON()
 
 stochastic_data
-stochastic_data =stochastic_data$`Technical Analysis: STOCH` %>% 
+stochastic_data = stochastic_data$`Technical Analysis: STOCH` %>% 
   as.tibble() 
 stochastic_data
 
@@ -96,19 +87,28 @@ stochastic_data = stochastic_data %>% unnest() %>%
   mutate(stochastic = rep_len(c("SlowD", "SlowK"), length.out = 2)) %>% 
   pivot_longer(cols = -stochastic, names_to = "time", values_to = "stochastic_values") %>% 
   arrange(time) %>% 
-  mutate(date = ymd_hm(time,tz = "EST")) %>% 
+  mutate(date = ymd_hm(time)) %>% 
   pivot_wider(names_from = stochastic,values_from = stochastic_values) %>% 
   filter(date >= "2021-09-01") %>% 
-  arrange(date,time)
+  arrange(time)
 
 
 
+stochastic_data %>% 
+  mutate(date = format(time, tz="America/Los_Angeles"))
 
-  
+   
+ 
 
 
 ```
+#Using EOD API
+```{r}
+eod_call = GET(str_glue("https://www.alphavantage.co/query?function=STOCH&symbol={symbol}&interval=1min&apikey={key}&fastkperiod=14&slowdperiod=3",
+                          symbol = "SPY", key = Sys.getenv("ALPHA_VANTAGE_KEY")))
 
+
+```
 
 
 
