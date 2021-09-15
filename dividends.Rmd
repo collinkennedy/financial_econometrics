@@ -1,0 +1,35 @@
+---
+title: "dividends"
+author: "Collin"
+date: "9/7/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(httr)
+library(DBI)
+
+
+```
+
+
+```{r}
+library(RPostgres)
+library(DBI)
+library(dbplyr)
+library(dplyr)
+library(ggplot2)
+
+Sys.setenv(PGGSSENCMODE="disable")
+Sys.getenv("BIT_PW")
+
+con <- dbConnect(RPostgres::Postgres(), dbname = 'bitdotio', 
+                 host = 'db.bit.io',
+                 port = 5432,
+                 user = 'bitdotio',
+                 password = Sys.getenv("BIT_PW"))
+
+```
+

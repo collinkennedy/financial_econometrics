@@ -15,6 +15,8 @@ library(jsonlite)
 library(TTR)
 library(zoo)
 library(chron)
+
+library(writexl)
 ```
 
 
@@ -23,7 +25,7 @@ library(chron)
 ```{r}
 #initialize taapi token into Renviron file
 readRenviron(".Renviron")
-Sys.getenv("EOD_TOKEN")
+Sys.getenv("MARKETSTACK_TOKEN")
 ```
 
 
@@ -57,10 +59,9 @@ high_low_close = price_data %>%
 ```{r}
 
 high_low_close %>% 
-  mutate(interval = rep(seq(1,n()/5), each=5)) %>% 
-  group_by(interval) %>% 
-  mutate(highest_high_5_days = rollmax())
- 
+  mutate(highest_high_14 = rollmax(high,5,align = "center"))
+
+
 ```
 
 
@@ -110,6 +111,42 @@ eod_call = GET(str_glue("https://www.alphavantage.co/query?function=STOCH&symbol
 
 ```
 
+
+#using sample text file
+```{r}
+
+#
+spy_data <- read_csv("SPY_5mintxt", col_names = FALSE)
+spy_data = spy_data %>% 
+  select(date = X1, open = X2, high = X3, low = X4, close = X5, volume = X6)
+
+spy_data %>% 
+  write_xlsx(path = "/Users/collinkennedy/Dropbox/finance/spy_data.xlsx")
+  
+```
+
+#using marketstack data
+```{r}
+mktwatch_call =GET(str_glue("http://api.marketstack.com/v1/intraday/2021-09-01?access_key={key}&symbols={symbol}&exchange=NYSE&interval={interval}&sort=ASC",
+                             key = Sys.getenv("MARKETSTACK_TOKEN"),
+                            interval = "1min",
+                             symbol = "SPY"))
+
+mktwatch = content(mktwatch_call, type = "text") %>% 
+  fromJSON()
+
+#store the dataframe the returned list as a tibble
+mktstack = mktwatch[2]$data %>% 
+  as.tibble()
+
+mktstack %>% 
+  mutate(date = as_datetime(gsub("+0000","",date),tz = "America/Los_Angeles")) %>% 
+  arrange(date)
+
+
+?as_datetime
+
+```
 
 
 

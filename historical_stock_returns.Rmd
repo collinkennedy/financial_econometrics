@@ -30,7 +30,7 @@ Then your password could be retrived by `Sys.getenv("DATABASEPW")`.
 The `.Renviron` won't be pushed to the git repo because the file was specified in `.gitignore`.
 
 ```{r}
-Sys.getenv("GITHUB_TOKEN")
+Sys.getenv("BIT_PW")
 ```
 
 
@@ -166,6 +166,10 @@ spy_gap_up = lows_df %>%
   )) %>% 
   mutate(gap_up_price_diff = High - lowest_low) %>% 
   mutate(percentage_change = gap_up_price_diff/lowest_low * 100)
+
+spy_gap_up %>% 
+  filter(days_after_lowest_low == "0 days") %>% 
+  slice_min(percentage_change)
   
   spy_gap_up %>% 
     group_by(days_after_lowest_low) %>% 
