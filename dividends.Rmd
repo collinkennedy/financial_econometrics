@@ -16,11 +16,6 @@ library(DBI)
 
 
 ```{r}
-library(RPostgres)
-library(DBI)
-library(dbplyr)
-library(dplyr)
-library(ggplot2)
 
 Sys.setenv(PGGSSENCMODE="disable")
 Sys.getenv("BIT_PW")
@@ -31,5 +26,22 @@ con <- dbConnect(RPostgres::Postgres(), dbname = 'bitdotio',
                  user = 'bitdotio',
                  password = Sys.getenv("BIT_PW"))
 
+query <- 'SET search_path to "collinkennedy/demo_db"'
+DBI::dbSendQuery(con, sql(query))
+
+con %>% 
+  dbListFields("spy")
 ```
+
+
+
+```{r}
+
+
+
+
+```
+
+
+
 
